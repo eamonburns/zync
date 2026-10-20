@@ -12,7 +12,7 @@ pub fn build(b: *std.Build) void {
     const client_exe = b.addExecutable(.{
         .name = "zync",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("src/client_main.zig"),
+            .root_source_file = b.path("src/main_client.zig"),
             .target = target,
             .optimize = optimize,
             .imports = &.{
@@ -35,7 +35,7 @@ pub fn build(b: *std.Build) void {
     const server_exe = b.addExecutable(.{
         .name = "zync-server",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("src/server_main.zig"),
+            .root_source_file = b.path("src/main_server.zig"),
             .target = target,
             .optimize = optimize,
             .imports = &.{
