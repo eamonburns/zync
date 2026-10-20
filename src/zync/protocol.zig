@@ -42,9 +42,11 @@ comptime {
     }
 }
 
-pub fn MakeSerializeFn(T: type) fn (T, *Io.Writer) Io.Writer.Error!void {
+pub const SerializeError = Io.Writer.Error;
+
+pub fn MakeSerializeFn(T: type) fn (T, *Io.Writer) SerializeError!void {
     return struct {
-        pub fn impl(message: T, writer: *Io.Writer) Io.Writer.Error!void {
+        pub fn impl(message: T, writer: *Io.Writer) SerializeError!void {
             try writer.writeByte(@backingInt(T.marker));
 
             const message_info = @typeInfo(T).@"struct";
@@ -65,9 +67,11 @@ pub fn MakeSerializeFn(T: type) fn (T, *Io.Writer) Io.Writer.Error!void {
     }.impl;
 }
 
-pub fn MakeDeserializeFn(T: type) fn ([]u8) T {
+pub const DeserializeError = error{};
+
+pub fn MakeDeserializeFn(T: type) fn ([]u8) DeserializeError!T {
     return struct {
-        pub fn impl(bytes: []u8) T {
+        pub fn impl(bytes: []u8) DeserializeError!T {
             const marker: Marker = @fromBackingInt(bytes[0]);
             assert(marker == T.marker);
 
@@ -91,9 +95,11 @@ pub fn MakeDeserializeFn(T: type) fn ([]u8) T {
     }.impl;
 }
 
-pub fn MakeDeserializeAllocFn(T: type) fn (Allocator, []u8) Allocator.Error!T {
+pub const DeserializeAllocError = DeserializeError || Allocator.Error;
+
+pub fn MakeDeserializeAllocFn(T: type) fn (Allocator, []u8) DeserializeAllocError!T {
     return struct {
-        pub fn impl(gpa: Allocator, bytes: []u8) Allocator.Error!T {
+        pub fn impl(gpa: Allocator, bytes: []u8) DeserializeAllocError!T {
             const marker: Marker = @fromBackingInt(bytes[0]);
             assert(marker == T.marker);
 
@@ -123,6 +129,30 @@ pub fn MakeDeserializeAllocFn(T: type) fn (Allocator, []u8) Allocator.Error!T {
             }
 
             return message;
+        }
+    }.impl;
+}
+
+pub fn MakeFormatFn(T: type) fn (T, *Io.Writer) Io.Writer.Error!void {
+    return struct {
+        pub fn impl(self: T, writer: *Io.Writer) Io.Writer.Error!void {
+            const marker_name = @tagName(T.marker);
+            try writer.writeByte(std.ascii.toUpper(marker_name[0]));
+            try writer.writeAll(marker_name[1..]);
+            try writer.writeAll("{ ");
+            const info = @typeInfo(T).@"struct";
+            inline for (info.field_names, info.field_types, 0..) |field_name, field_type, i| {
+                if (i != 0) try writer.writeAll(", ");
+                try writer.print("{s}: ", .{field_name});
+                switch (field_type) {
+                    []const u8 => try writer.print("{q}", .{@field(self, field_name)}),
+                    else => switch (@typeInfo(field_type)) {
+                        .int, .float => try writer.print("{d}", .{@field(self, field_name)}),
+                        else => @compileError("unable to format field " ++ field_name ++ " of type " ++ @typeName(field_type)),
+                    },
+                }
+            }
+            try writer.writeAll(" }");
         }
     }.impl;
 }

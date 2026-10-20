@@ -10,6 +10,7 @@ pub const Init = struct {
     pub const marker: proto.Marker = .init;
     pub const serialize = proto.MakeSerializeFn(@This());
     pub const deserialize = proto.MakeDeserializeFn(@This());
+    pub const format = proto.MakeFormatFn(@This());
 };
 
 pub const InitResponse = struct {
@@ -18,6 +19,7 @@ pub const InitResponse = struct {
     pub const marker: proto.Marker = .init_response;
     pub const serialize = proto.MakeSerializeFn(@This());
     pub const deserialize = proto.MakeDeserializeFn(@This());
+    pub const format = proto.MakeFormatFn(@This());
 };
 
 pub const Ping = struct {
@@ -26,13 +28,5 @@ pub const Ping = struct {
     pub const marker: proto.Marker = .ping;
     pub const serialize = proto.MakeSerializeFn(@This());
     pub const deserializeAlloc = proto.MakeDeserializeAllocFn(@This());
-
-    pub fn format(
-        self: Ping,
-        writer: *std.Io.Writer,
-    ) std.Io.Writer.Error!void {
-        try writer.writeAll("Ping{");
-        try writer.print(" message: {q}", .{self.message});
-        try writer.writeAll(" }");
-    }
+    pub const format = proto.MakeFormatFn(@This());
 };
