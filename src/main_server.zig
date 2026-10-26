@@ -39,7 +39,7 @@ pub fn main(init: std.process.Init) !void {
         _ = msg_arena.reset(.retain_capacity);
 
         const msg = try socket.receive(io, &msg_data_buf);
-        const marker: zync.protocol.Marker = @fromBackingInt(msg.data[0]);
+        const marker: zync.protocol.Marker.NonExhaustive = @fromBackingInt(msg.data[0]);
         assert(!msg.flags.trunc);
         switch (marker) {
             .init => {
@@ -52,7 +52,6 @@ pub fn main(init: std.process.Init) !void {
             },
             .ping => {
                 const ping_msg: zmsg.Ping = try .deserializeAlloc(arena, msg.data);
-                std.debug.print("  {f}\n", .{ping_msg});
                 std.debug.print("<- (from: {f}) {f}\n", .{ msg.from, ping_msg });
 
                 var aw: Io.Writer.Allocating = .init(arena);
@@ -62,6 +61,9 @@ pub fn main(init: std.process.Init) !void {
                 try response.serialize(&aw.writer);
 
                 try socket.send(io, &msg.from, aw.written());
+            },
+            _ => |m| {
+                std.debug.print("<- (from: {f}) invalid marker 0x{x:02}: {q}\n", .{ msg.from, @backingInt(m), msg.data });
             },
         }
 

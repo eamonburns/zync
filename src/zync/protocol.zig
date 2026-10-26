@@ -11,6 +11,13 @@ pub const Marker = enum(u8) {
     init,
     init_response,
     ping,
+
+    pub const NonExhaustive = blk: {
+        const marker_info = @typeInfo(Marker).@"enum";
+        var field_values: [marker_info.field_values.len]marker_info.tag_type = undefined;
+        for (&field_values, marker_info.field_values) |*dst, src| dst.* = src;
+        break :blk @Enum(marker_info.tag_type, .nonexhaustive, marker_info.field_names, &field_values);
+    };
 };
 
 comptime {
